@@ -1,0 +1,530 @@
+---
+title: "Web Scraping Tutorial : rvest, RSelenium & Rcrawler"
+author: "Cathelyn Tan"
+format:
+  pdf:
+    fontsize: 10pt
+    toc: true
+    number-sections: true
+    extra_dependencies: ["geometry"]
+    geometry: top=0.7in, bottom=1.1in, left=0.9in, right=0.85in
+    header-includes:
+      - \renewcommand{\baselinestretch}{1}
+      - \title{ \vspace{-10em} Web Scraping Tutorial (STAT260 project) }
+      - \sloppy
+      - \usepackage{microtype}
+---
+
+------------------------------------------------------------------------
+
+\newpage
+
+# Introduction : What is Web Scraping?
+
+\vspace{-0.8em}
+
+Web scraping is a very useful tool used for extracting data from websites. Often, data providers publish their data in a convenient readable formatted tables. However, not all of these sites provide means to download and collect the data, that is when web scraping comes in handy. We will be learning basics of HTML and CSS along with the use of R packages such as `rvest`, `RSelenium` and `Rcrawler` for web scraping.
+
+\vspace{-0.75em}
+
+## Prerequisites
+
+\vspace{-0.8em}
+
+Before we begin, install the required R packages: \vspace{-0.75em}
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+```
+
+```{r, echo=TRUE, eval=FALSE}
+install.packages("tidyverse")
+install.packages("rvest") 
+```
+
+\vspace{-0.5em}
+
+Load the libraries: \vspace{-0.75em}
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rvest) 
+```
+
+# Ethical and legal considerations
+
+\vspace{-0.8em}
+
+There are limits to which web scraping tools can be used, that is only if the data is **public**, **non-personal**, and **factual**. These factors are critical as they are connected to the **terms and conditions** of the website, **copyright** and **personally identifiable information**. If the data does not fill the requirements described previously, and the use of scraping the data is monetary, then consulting with a lawyer is necessary. In any case, we should respect the resources of the server hosting the site being scraped.
+
+# Understanding HTML Basics
+
+\vspace{-0.8em}
+
+HTML stands for HyperText Markup Language, used to describe the structure and content of web pages. HTML uses tags surrounded by \< \>, an example of HTML code can look like this : \vspace{-0.5em}
+
+```         
+<html>
+    <title>WEB SCRAPING TUTORIAL</title>
+<body>
+  <h1 id='first'>this is a heading</h1>
+  <p><b>we can bold text like this</b></p>
+</body>
+```
+
+## HTML Elements
+
+\vspace{-0.8em}
+
+HTML elements consist of:
+
+-   start tag : \<tag\>
+
+-   end tag : \</tag\>
+
+-   content : Text or other elements between the start and end tags.
+
+Tags can be **block** or **inline**, block tags (forms structure of the content) are \<h1\>, \<section\>, \<p\> and \<ol\>. Inline tags (format text inside block tags) are \<b\>, \<i\>, \<a\>.
+
+\vspace{-0.5em}
+
+## HTML Attributes
+
+\vspace{-0.8em}
+
+Attributes define extra information about elements. They are written as name='value', some of important attributes are **id**, **class**, **href** and **src**. These are essential to identify specific elements when scraping.
+
+# CSS
+
+\vspace{-0.8em}
+
+CSS is short for Cascading Style Sheet. While HTML provides the content and structure of a web page, CSS is used to style HTML elements, controlling aspects like color, positioning, and layout. Two concepts we need to learn before we delve into the R web scraping code are **classes** and **ids**.
+
+\vspace{-0.5em}
+
+## Classes
+
+\vspace{-0.8em}
+
+CSS classes group similar elements together for consistent styling. For example, if we want several paragraphs to appear in color blue, we could assign them a common class like blue-text and define the style once in a separate CSS file :
+
+```{html}
+.blue-text {
+  color: blue;
+}
+```
+
+\vspace{-0.5em}
+
+## IDs
+
+\vspace{-0.8em}
+
+CSS ids are used to uniquely identify a single element. For example : \vspace{-0.5em}
+
+```{html}
+<p id=”special” >This is a special tag.</p>
+```
+
+\vspace{-0.95em}
+
+this makes it easier to target specific elements when scraping.
+
+# Web Scraping in R
+
+\vspace{-0.8em}
+
+Make sure all the necessary packages (shown in the introduction part) has been installed and loaded into the R environment.
+
+\vspace{-0.75em}
+
+## Extracting data
+
+\vspace{-0.8em}
+
+The first step is to read the HTML from a specified URL using `read_html()` function, which takes the URL of the website you want to scrape as an argument and returns an `xml_document` object.\vspace{-0.65em}
+
+```{r}
+html <- read_html("https://cathelyn06.github.io/webscrapingRcath/webscrapingresources.html")
+html
+```
+
+Above is an example `xml_document`, this structure contains the tags and contents of the web page, which we will analyze to extract the data.
+
+You can also write HTML inline using `minimal_html()` like this : \vspace{-0.65em}
+
+```{r}
+example <- minimal_html("
+  <p>Hello!</p>
+  <ol>
+    <li>This is an ordered list</li>
+  </ol>
+")
+example
+```
+
+### CSS Selectors
+
+\vspace{-0.8em}
+
+CSS selectors are key to locating specific elements in the HTML. The rvest package uses CSS selectors to target HTML elements. Here are examples of some basic selectors:
+
+-   p selects all \<p\> elements.
+
+-   .class-name selects all elements with the class class-name (ex : .important)
+
+-   #id selects the element with the id attribute which is unique, so only select that single unique element (ex : #first).
+
+\vspace{-0.65em}
+
+```{r}
+example2 <- read_html("https://cathelyn06.github.io/webscrapingRcath/cssselectorsexample.html")
+example2 %>% html_elements("p")
+example2 %>% html_elements(".important")
+example2 %>% html_elements("#first")
+```
+
+we have seen the use of `html_elements()` (which is also called html_nodes() in older version), another important function is `html_element()`.
+
+-   **html_elements()**: Returns all matching elements as a vector. If no match is found, it returns a vector of length 0.
+
+-   **html_element()**: Returns only the first matching element. If no match is found, it returns a NA (missing value).
+
+\vspace{-0.65em}
+
+```{r}
+example2 %>% html_elements(".important") %>% html_text2()
+
+example2 %>% html_element(".important") %>% html_text2()
+```
+
+## Extracting Nested Elements
+
+\vspace{-0.8em}
+
+If you want to extract data which is **nested** within other elements, both `html_elements()` and `html_element()` may be used. For instance, you want to get the grades of students from a list. Here's an example where each list item contains students' name and grades :
+
+\vspace{-0.65em}
+
+```{r}
+nested_elements <- minimal_html("
+  <ul>
+    <li><b>Alex</b> has a score of <span class='grade'>97%</span></li>
+    <li><b>Cathelyn</b> has a score of </li>
+    <li><b>Jane</b> has a score of <span class='grade'>88.5%</span></li>
+  </ul>
+")
+```
+
+To extract the name of students and their grades, we can first make a vector where each element corresponds to a different character :
+
+\vspace{-0.65em}
+
+```{r}
+characters <- nested_elements %>% html_elements("li")
+characters %>% html_element("b") #gives the students' name
+characters %>% html_element(".grade") #gives their grades
+```
+
+## Text and Attributes
+
+\vspace{-0.8em}
+
+### `html_text2()`
+
+\vspace{-0.8em}
+
+This function extracts plain text contents of an HTML element : \vspace{-0.65em}
+
+```{r}
+html%>%
+  html_element("p") %>%
+  html_text2()
+```
+
+\vspace{-2em}
+
+### `html_attr()`
+
+\vspace{-0.8em}
+
+This function extracts data from attributes and always returns a **string**. For example : \vspace{-0.65em}
+
+```{r}
+example2%>%
+  html_elements("p.important") %>%
+  html_attr("class")
+```
+
+\vspace{-0.75em}
+
+## Scraping tables
+
+\vspace{-0.8em}
+
+There are times where data is stored in HTML tables, and `rvest` provides a handy function to extract table data by using `html_table()`, which returns it as a tibble. Here is an example :
+
+\vspace{-0.6em}
+
+```{r}
+example_table <- minimal_html("
+  <table class='mytable'>
+    <tr><th>name</th>   <th>midterm grade</th></tr>
+    <tr><td>Alex</td> <td>97</td></tr>
+    <tr><td>Cathelyn</td> <td>92</td></tr>
+  </table> ")
+example_table %>% html_element("table") %>% html_table()
+```
+
+\vspace{-2.5em}
+
+# Advanced Scraping with `RSelenium`
+
+\vspace{-0.85em}
+
+RSelenium is another powerful tool in R for web scraping, especially when dealing with dynamic web pages which requires user interactions or JavaScript related. Unlike rvest, RSelenium allows you to control a web browser programmatically, enabling scraping of content that loads dynamically such as clicking buttons or scrolling.\vspace{-0.95em}
+
+## Prerequisites
+
+\vspace{-0.85em}
+
+1.  Install Java
+
+2.  Download the ChromeDriver and Selenium server
+
+3.  Install RSelenium in R \vspace{-0.5em}
+
+```{r eval=FALSE}
+install.packages('RSelenium')
+```
+
+\vspace{-2em}
+
+## Scraping static pages
+
+\vspace{-0.85em}
+
+Then load RSelenium and connect the to Selenium server in R and navigate to a web page.
+
+\vspace{-0.65em}
+
+```{r eval=FALSE}
+library(RSelenium)
+rem_driver <- remoteDriver(remoteServerAddr = 'localhost', #connect to selenium server
+                           browserName = 'chrome',
+                           port=4444L)
+rem_driver$open()
+rem_driver$navigate("https://www.example.com") #navigate to a web page
+```
+
+\vspace{-2em}
+
+### Accessing Elements
+
+\vspace{-0.85em}
+
+RSelenium offers several ways to identify and access elements, such as by ID, class or **CSS selectors** :
+
+\vspace{-0.25em}
+
+1.  By **ID** : \vspace{-0.75em}
+
+```{r eval=FALSE}
+element_id <- rem_driver$findElement(using = 'id', value = 'element_id_here')
+```
+
+\vspace{-0.85em}
+
+2.  By **Class** : \vspace{-0.75em}
+
+```{r eval=FALSE}
+element_class <- rem_driver$findElement(using = 'class', value = 'class_name_here')
+```
+
+\vspace{-0.85em}
+
+3.  By **CSS Selector** : \vspace{-0.85em}
+
+```{r eval=FALSE}
+ element_css <- rem_driver$findElements(using = 'css', value = 'css_selector_here')
+```
+
+\vspace{-0.75em}
+
+### Extracting Data from Elements
+
+\vspace{-0.85em}
+
+Once an element is selected, you can extract its data. For example:
+
+**Extract Attribute (e.g., image link)**: getElementAttribute() function can be used to get image link. \vspace{-0.65em}
+
+```{r eval=FALSE}
+attribute_value <- elements_css[[1]]$getElementAttribute('attribute_name_here')
+```
+
+\vspace{-0.65em}
+
+**Extract Inner Text**: To extract the text inside an element, use getElementText(): \vspace{-0.65em}
+
+```{r eval=FALSE}
+inner_text <- element_class[[1]]$getElementText()
+```
+
+## Scraping dynamic pages
+
+\vspace{-0.85em}
+
+Dynamic pages often require user interaction, such as clicking or scrolling, to load content. With RSelenium, you can automate these interactions.
+
+**Clicking Elements** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+rem_driver$findElements(using = 'css', value = 'css_selector_here')[[1]]$clickElement()
+```
+
+\vspace{-0.65em}
+
+**Submitting forms or entering text** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+rem_driver$findElement(using = 'css', value = 'input_selector_here')$sendKeysToElement(list(
+  "text_here", key = "enter"))
+```
+
+\vspace{-0.65em}
+
+**Scrolling** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+rem_driver$executeScript("window.scrollTo(0, document.body.scrollHeight);")
+```
+
+# Using `Rcrawler`
+
+\vspace{-0.85em}
+
+`Rcrawler` is another R package that helps us harvest information from the web. `Rcrawler`is used to scrape network graph related tasks.
+
+## Scraping data with XPath
+
+\vspace{-0.65em}
+
+```{r eval=FALSE}
+Rcrawler(Website = "https://your-website-url.com", # Replace with the actual URL
+         no_cores = 4, 
+         no_conn = 4, 
+         ExtractXpathPat = c("//h2[@class='your-title-class']", "//div[@class='your-content
+                             -class']"),
+         # Replace with XPath that targets the title and content element on your website.
+         
+         PatternsNames = c("Title", "Content"))
+
+```
+
+\vspace{-0.75em}
+
+## Scraping data with CSS selectors
+
+\vspace{-0.65em}
+
+```{r eval=FALSE}
+Rcrawler(Website = "https://your-website-url.com", # Replace with the actual URL 
+         no_cores = 4, 
+         no_conn = 4, 
+         ExtractCSSPat = c(".your-title-class", ".your-content-class"), 
+         # Replace with the CSS class that targets the title and content element on your website.
+         PatternsNames = c("Title", "Content"))
+```
+
+\vspace{-0.75em}
+
+## Scraping data with XPath
+
+\vspace{-0.65em}
+
+```{r eval=FALSE}
+links <- ContentScraper(Url = "https://your-website-url.com/page1", # Replace with actual URL
+                        XpathPatterns = "//*/a/@href", 
+                        ManyPerPattern = TRUE)
+
+# Scraping Links from the whole website
+Rcrawler(Website = "https://your-website-url.com/", 
+         ExtractXpathPat = "//*/a/@href", 
+         # Replace with the XPath pattern that targets the links (URLs) on your website.
+         ManyPerPattern = TRUE)
+```
+
+\vspace{-0.75em}
+
+## Handling scraped data
+
+\vspace{-0.65em}
+
+**Extracting Titles** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+Title <- unlist(lapply(DATA, `[[`, 1))
+```
+
+**Extracting Content** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+Content <- unlist(lapply(DATA, `[[`, 2))
+```
+
+**Converting Data to a Data frame** : \vspace{-0.65em}
+
+```{r eval=FALSE}
+df <- data.frame(do.call("rbind", DATA))
+```
+
+\vspace{-1em}
+
+# Conclusion : when to use rvest, RSelenium or Rcrawler?
+
+\vspace{-0.85em}
+
++-------------+---------------+------------------------------------------------+-------------------------------------------------------------+
+| Tool        | Best for      | When to use                                    | Example                                                     |
++:============+:==============+:===============================================+:============================================================+
+| `rvest`     | Static        | -   Data can be found directly in HTML source. | scraping **product prices** from an e-commerce site.        |
+|             |               |                                                |                                                             |
+|             | websites      | -   No JavaScript interaction required.        |                                                             |
+|             |               |                                                |                                                             |
+|             |               | \vspace{-2em}                                  |                                                             |
+|             |               |                                                |                                                             |
+|             |               | ```                                            |                                                             |
+|             |               | ```                                            |                                                             |
+|             |               |                                                |                                                             |
+|             |               | \vspace{-0.8em}                                |                                                             |
++-------------+---------------+------------------------------------------------+-------------------------------------------------------------+
+| `RSelenium` | Dynamic       | -   Scrolling, others.                         | Extract job listings from site with "**Load More**" button. |
+|             |               |                                                |                                                             |
+|             | websites      | -   Requires JavaScript handling               |                                                             |
+|             |               |                                                |                                                             |
+|             |               | \vspace{-2em}                                  |                                                             |
+|             |               |                                                |                                                             |
+|             |               | ```                                            |                                                             |
+|             |               | ```                                            |                                                             |
+|             |               |                                                |                                                             |
+|             |               | \vspace{-0.8em}                                |                                                             |
++-------------+---------------+------------------------------------------------+-------------------------------------------------------------+
+| `Rcrawler`  | Large-scale   | -   Scraping multiple pages or entire webpage. | Scraping **news articles** from a blog                      |
+|             |               |                                                |                                                             |
+|             | data scraping | -   Extracting large datasets.                 |                                                             |
++-------------+---------------+------------------------------------------------+-------------------------------------------------------------+
+
+\vspace{-1.5em}
+
+# Citations
+
+\vspace{-0.8em}
+
+Hadley Wickham, M. Ç.-R. (n.d.). *24  web scraping*. 24  Web scraping – R for Data Science (2e). <https://r4ds.hadley.nz/webscraping.html#nesting-selections>
+
+Pascual, C. (2024, May 10). *Tutorial: Web scraping in R with rvest*. Dataquest. <https://www.dataquest.io/blog/web-scraping-r-rvest/>
+
+Peters, R. (2023, November 27). *Getting started with rselenium*. ScrapingBee. <https://www.scrapingbee.com/blog/getting-started-with-rselenium/>
+
+Khalil, S., & Fakir, M. (2017). RCrawler: An R package for parallel web crawling and scraping. SoftwareX, 6, 98-106.

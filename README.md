@@ -10,4 +10,5 @@ This repo hosts the practice pages used in the tutorial's examples, published wi
 **Topics covered:** HTML and CSS basics, CSS selectors, nested elements, extracting text and attributes, scraping tables, and automating a browser for dynamic pages.
 
 📄 [Read the full tutorial (PDF)](STAT260-final-project.pdf)
+
 💻 [Quarto source](STAT260-final-project.qmd)
